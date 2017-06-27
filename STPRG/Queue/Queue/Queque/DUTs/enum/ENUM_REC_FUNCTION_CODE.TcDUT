@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <DUT Name="ENUM_REC_FUNCTION_CODE" Id="{01492bd9-ef38-4f19-b222-eff7658bf4f8}">
+    <Declaration><![CDATA[TYPE ENUM_REC_FUNCTION_CODE :
+(
+	(*__________Axis Control_________________*)
+	MD  := 0,//Digital
+	MA  := 1,//Analog
+	G00 := 2,//move absolute
+	G01 := 3,//move relative
+	G02 := 4,//move velocity
+	G03 := 5,//move Jog
+	G04 := 6,//go home
+	G05 := 7,//reset error
+	G06 := 8,//stop
+	
+   (*________Cylinder Control_______________*)	
+	C00 := 10,// Extend
+	C01 := 11,// Retract
+	C02 := 12 // Reset
+)UDINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

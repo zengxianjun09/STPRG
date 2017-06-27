@@ -1,0 +1,196 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="CMD_Manage" Id="{ec59928e-2bac-45aa-a8d3-2b8e3f5980b8}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK CMD_Manage
+VAR_INPUT
+
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR	
+	CMD_state        : UDINT;
+	SendDataDelay    : TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*CASE CMD_state OF
+0:
+	Main.Axis.bAbsGo_Auto:=FALSE;
+	Main.Axis.bRelGo_Auto:=FALSE;
+	Main.Axis.bVelGo_Auto:=FALSE;
+	Main.Axis.bReset_Auto:=FALSE;
+	Main.Axis.bStop_Auto:=FALSE;
+	
+	Main.Cylinder.bExtend_auto:=FALSE;
+	Main.Cylinder.bRetract_auto:=FALSE;
+	Main.Cylinder.bReset_Error:= FALSE;
+	
+	Main.sSendData.bInsert:=FALSE;
+	CMD_state:=1;
+1:
+	IF NOT Main.sReceiveData.Queue_Err THEN
+		IF NOT  Main.sReceiveData.Queue_Empty THEN
+			Main.sReceiveData.bDelete:= TRUE;
+			CMD_state:=10;
+		END_IF
+	END_IF
+	
+10:	
+	Main.sReceiveData.bDelete:= FALSE;
+	CASE Main.sReceiveData.Delete_Queue.FUNCTIONCODE OF
+		G00: //ABS
+			Main.Axis.bAbsGo_Auto:=TRUE;
+			Main.Axis.fSetAbsPos_Auto:=Main.sReceiveData.Delete_Queue.DATA;
+			Main.Axis.fSetVel_Auto:=Main.sReceiveData.Delete_Queue.Vel;
+			
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=0;
+			CMD_state:=20;
+		G01: //REL
+			Main.Axis.bRelGo_Auto:=TRUE;
+			Main.Axis.fSetRelPos_Auto:=Main.sReceiveData.Delete_Queue.DATA;
+			Main.Axis.fSetVel_Auto:=Main.sReceiveData.Delete_Queue.Vel;
+			
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=1;
+			CMD_state:=20;
+		G02: //VEL
+			Main.Axis.bVelGo_Auto:=TRUE;
+			Main.Axis.fSetVel_Auto:=Main.sReceiveData.Delete_Queue.Vel;
+			
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=2;
+			CMD_state:=20;
+		G03:
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=3;
+			CMD_state:=100;
+		G04:
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=4;
+			CMD_state:=100;
+		G05:// RESET
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=5;
+			CMD_state:=21;
+			
+		G06:// STOP
+			Main.Axis.bStop_Auto:=TRUE;	
+			
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=6;
+			CMD_state:=20;
+			
+		C00://Extend
+			Main.Cylinder.bExtend_auto:= TRUE;
+			
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=7;
+			Cmd_state:= 40;
+		C01://Retract
+			Main.Cylinder.bRetract_auto:= TRUE;
+			
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=8;
+			Cmd_state:= 40;
+		C02://reset
+			Main.sSendData.Insert_Queue.FUNCTIONCODE:=9;
+			Cmd_state:=41;
+	ELSE
+			CMD_state:=0;
+	END_CASE
+(*-------------------Axis----------------------------------*)	
+20:
+	Main.sSendData.Insert_Queue.STATUE:=Main.Axis.nStatus;
+	IF Main.Axis.mc_VelMove.InVelocity THEN
+		Main.sSendData.Insert_Queue.STATUE:='TRUE';
+	END_IF
+	IF NOT Main.sSendData.Queue_Err THEN
+		IF NOT Main.sSendData.Queue_Full THEN
+			Main.sSendData.bInsert:=TRUE;
+		END_IF	
+	END_IF
+	CMD_state:=30;
+	
+21:
+	IF Main.Axis.bError THEN
+	Main.Axis.bReset_Auto:=TRUE;
+	CMD_state:=31;
+	ELSE
+	CMD_state:= 0;
+	END_IF	
+	
+30:
+	IF NOT Main.Axis.bBusy THEN
+		CMD_state:=100;				
+	ELSIF Main.Axis.bError THEN
+		CMD_state:=0;
+	END_IF
+	
+31:
+	IF NOT Main.Axis.bError THEN		
+		Main.sSendData.Insert_Queue.STATUE:='TRUE';
+	ELSE
+		Main.sSendData.Insert_Queue.STATUE:=Main.Axis.nStatus;	
+	END_IF
+	IF NOT Main.sSendData.Queue_Err THEN
+		IF NOT Main.sSendData.Queue_Full THEN
+			Main.sSendData.bInsert:=TRUE;
+		END_IF	
+	END_IF
+	CMD_state:=100;
+	
+(*----------------------------Cylinder-----------*)	
+40:	
+	Main.sSendData.Insert_Queue.STATUE:=Main.Cylinder.nStatus;
+	IF NOT Main.sSendData.Queue_Err THEN
+		IF NOT Main.sSendData.Queue_Full THEN
+			Main.sSendData.bInsert:=TRUE;
+		END_IF	
+	END_IF
+	Cmd_state:=50;
+	
+41:
+	IF Main.Cylinder.error THEN
+	Main.Cylinder.bReset_Error:= TRUE;
+	Cmd_state:=51;
+	END_IF	
+50:
+	IF Main.Cylinder.done THEN
+		Cmd_state:=100;
+	ELSE
+		Cmd_state:=0;
+	END_IF
+	
+51:
+	IF NOT Main.Cylinder.error THEN
+		Main.sSendData.Insert_Queue.STATUE:='TRUE';
+	ELSE
+		Main.sSendData.Insert_Queue.STATUE:=Main.Cylinder.nStatus;
+	END_IF	
+	IF NOT Main.sSendData.Queue_Err THEN
+		IF NOT Main.sSendData.Queue_Full THEN
+			Main.sSendData.bInsert:=TRUE;
+		END_IF	
+	END_IF
+	Cmd_state:=100;
+	
+100:	
+	Main.Axis.bAbsGo_Auto:=FALSE;
+	Main.Axis.bRelGo_Auto:=FALSE;
+	Main.Axis.bVelGo_Auto:=FALSE;
+	Main.Axis.bReset_Auto:=FALSE;
+	Main.Axis.bStop_Auto:=FALSE;
+	Main.Cylinder.bExtend_auto:=FALSE;
+	Main.Cylinder.bRetract_auto:=FALSE;
+	Main.Cylinder.bReset_Error:= FALSE;
+	
+	Main.sSendData.bInsert:=FALSE;
+	CMD_state:=0;
+END_CASE
+
+(*_______________Queue_send___________________*)
+SendDataDelay(IN:=NOT SendDataDelay.Q , PT:=T#200MS , Q=> , ET=> );
+IF SendDataDelay.Q THEN
+	IF NOT Main.sSendData.Queue_Err THEN
+		IF NOT Main.sSendData.Queue_Empty THEN
+			Main.sSendData.bDelete:=TRUE;
+		END_IF
+	END_IF
+ELSE
+	Main.sSendData.bDelete:=FALSE;
+END_IF *)]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="Queue_SEND_Contrl" Id="{3e1c31a3-c491-4deb-88c8-3aac95f922fe}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK Queue_SEND_Contrl
+VAR
+	SEND_Queue_List     : ARRAY[0..Param_Queue.MAX_QUEUE_SIZE] OF SEND_CMD_DATA;
+	SEND_Queue          : Send_Queue;	
+	Head_Queue          : SEND_CMD_DATA;
+	
+	InsertR_TRIG        : R_TRIG;
+	DeleteR_TRIG        : R_TRIG;
+	InitR_TRIG          : R_TRIG;
+	
+	
+	bInit               : BOOL;
+	
+	Queue_CNT           : INT;
+	Queue_Full          : BOOL;
+	Queue_Empty         : BOOL;
+	Queue_Err           : BOOL;
+END_VAR
+VAR_INPUT
+	Insert_Queue        : SEND_CMD_DATA;
+	Delete_Queue        : SEND_CMD_DATA;
+	bInsert             : BOOL;
+	bDelete             : BOOL;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[SEND_Queue(SEND_Queue_List:=SEND_Queue_List , Err_Out=>Queue_Err );
+
+Head_Queue:= SEND_Queue.Head_Queue();
+Queue_CNT:= SEND_Queue.Count_Queue();
+Queue_Full:= SEND_Queue.Full_Queue();
+Queue_Empty:= SEND_Queue.Empty_Queue();
+
+InsertR_TRIG(CLK:= bInsert);
+IF InsertR_TRIG.Q THEN
+	SEND_Queue.Insert_Queue(Insert_Queue:= Insert_Queue);
+END_IF
+
+DeleteR_TRIG(CLK:= bDelete);
+IF DeleteR_TRIG.Q THEN	
+	Delete_Queue:= SEND_Queue.Delete_Queue();
+	Queue_SendDel_Flag:= TRUE;
+ELSE
+	Queue_SendDel_Flag:= FALSE;
+END_IF
+
+InitR_TRIG(CLK:= bInit);
+IF InitR_TRIG.Q THEN
+	SEND_Queue.Init_Queue();
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
