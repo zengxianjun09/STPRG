@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="Cylinder_Contrl" Id="{3f639f06-59eb-49ee-a06e-7ceec654356e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK Cylinder_Contrl
+VAR_IN_OUT
+	Cylinder_HMI       : Cylinder_HMI_Structure;
+	Cylinder_CMD_Itf   : REC_CMD_DATA;
+END_VAR
+VAR_INPUT
+	mode               : UDINT;
+	bExtend_auto       : BOOL;
+	bRetract_auto      : BOOL;
+	bExtend_jog        : BOOL;
+	bRetract_jog       : BOOL;
+	bExtend_Enable     : BOOL := TRUE;
+	bRetract_Enable    : BOOL := TRUE;
+	bAbort_Enable      : BOOL;
+	bExtend_Prox       : BOOL := TRUE;;
+	bRetract_Prox      : BOOL := TRUE;;
+	bReset_Error       : BOOL;
+	tTimeOut           : TIME;
+END_VAR
+VAR_OUTPUT
+	bExtend_Work       : BOOL;
+	bRetract_Work      : BOOL;
+	done               : BOOL;
+	busy               : BOOL;
+	error              : BOOL;
+	errorID            : UDINT;
+	errorTXT           : STRING;	
+	doneCNT            : UDINT;
+	errorCNT           : UDINT;
+	nStatus            : STRING;
+END_VAR
+VAR
+	extendR_trig       : R_TRIG;
+	retractR_trig      : R_TRIG;
+	extendDelay_Prox   : TON := (PT:=T#100MS);
+	retractDelay_Prox  : TON := (PT:=T#100MS);
+	extend_TimeOut     : TON;
+	retract_TimeOut    : TON;
+	doneR_trig         : R_TRIG;
+	errorR_trig        : R_TRIG;
+	
+	
+	Cmd_state          : UDINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CylinderCtrl_extend();
+CylinderCtrl_reset();
+CylinderCtrl_retract();
+HMI_Mapping();
+Queue_Rec_Cmd();
+
+(*-------error and done count-------------*)
+
+doneR_trig(CLK:= done );
+IF doneR_trig.Q THEN
+	doneCNT:= doneCNT+1;
+END_IF
+
+errorR_trig(CLK:= error );
+IF errorR_trig.Q THEN
+	errorCNT:= errorCNT+1;
+END_IF 
+
+(*---------------nStatus------------------*)
+IF error THEN
+	nStatus:='ERROR';
+ELSIF done THEN
+	nStatus:='DONE';
+ELSIF Main.sReceiveData.Delete_Queue.FUNCTIONCODE = C02 THEN
+	nStatus:='RESET DONE';
+ELSE
+	nStatus:= '';
+END_IF]]></ST>
+    </Implementation>
+    <Method Name="CylinderCtrl_extend" Id="{030bf120-4259-4d66-85b0-3b9c4fb1a6f6}">
+      <Declaration><![CDATA[METHOD CylinderCtrl_extend
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[extendR_trig(CLK:=( (mode= 1) AND bExtend_jog ) OR ( (mode= 2) AND bExtend_auto ) );
+
+IF extendR_trig.Q AND (NOT error) THEN
+	busy:= TRUE;
+	done:= FALSE;
+	bExtend_Work:= TRUE;
+	bRetract_Work:= FALSE;
+END_IF
+
+extendDelay_Prox(IN:= bExtend_Work AND bExtend_Prox );
+IF extendDelay_Prox.Q THEN
+	busy:= FALSE;
+	done:= TRUE;
+END_IF
+
+extend_TimeOut(IN:= bExtend_Work AND NOT bExtend_Prox, PT:=tTimeOut  );
+IF extend_TimeOut.Q THEN
+	bExtend_Work:= FALSE;
+	bRetract_Work:= FALSE;
+	done:= FALSE;
+	busy:= FALSE;
+	error:= TRUE;
+	errorID:= 1;
+	errorTXT:='error: Cylinder extend timeout';	
+END_IF
+
+IF extendR_trig.Q AND (NOT bExtend_Enable ) THEN
+	bExtend_Work:= FALSE;
+	bRetract_Work:= FALSE;
+	done:= FALSE;
+	busy:= FALSE;
+	error:= TRUE;
+	errorID:= 2;
+	errorTXT:='error: Cylinder extend not enabled';	
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CylinderCtrl_reset" Id="{d7af26c4-2533-45f0-9e2a-795bdad951e2}">
+      <Declaration><![CDATA[METHOD CylinderCtrl_reset
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF bReset_Error AND error THEN
+	bExtend_Work:= FALSE;
+	bRetract_Work:= FALSE;
+	busy:= FALSE;
+	done:= FALSE;
+	error:= FALSE;
+	errorID:= 0 ;
+	errorTXT:= '';
+	
+	doneCNT:= 0;
+	errorCNT:= 0;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CylinderCtrl_retract" Id="{915456c0-6df9-4251-bcbf-418f8a40ea44}">
+      <Declaration><![CDATA[METHOD CylinderCtrl_retract
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[retractR_trig(CLK:= ((mode= 1) AND bRetract_jog ) OR ((mode= 2) AND bRetract_auto ));
+
+IF retractR_trig.Q AND (NOT error) THEN
+	busy:= TRUE;
+	done:= FALSE;
+	bExtend_Work:= FALSE;
+	bRetract_Work:= TRUE;
+END_IF
+
+retractDelay_Prox(IN:= bRetract_Prox AND bRetract_Work);
+IF retractDelay_Prox.Q THEN
+	busy:= FALSE;
+	done:= TRUE;
+END_IF
+
+retract_TimeOut(IN:= bRetract_Work AND ( NOT bRetract_Prox) , PT:= tTimeOut );
+IF retract_TimeOut.Q THEN
+	busy:= FALSE;
+	done:= FALSE;
+	error:= TRUE;
+	errorID:= 3;
+	errorTXT:= 'error: Cylinder retract timeout';
+END_IF
+
+IF retractR_trig.Q AND (NOT bRetract_Enable) THEN
+	bExtend_Work:= FALSE;
+	bRetract_Work:= FALSE;
+	busy:= FALSE;
+	done:= FALSE;
+	error:= TRUE;
+	errorID:= 4;
+	errorTXT:= 'error: Cylinder retract not enbled';
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HMI_Mapping" Id="{fc541375-3604-49bf-8216-27c2cd8302dd}">
+      <Declaration><![CDATA[METHOD HMI_Mapping
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*---------------INPUT-------------*)
+mode                         := HMISwithMode ;
+bExtend_jog    	             := Cylinder_HMI.bExtend_jog ;
+bRetract_jog                 := Cylinder_HMI.bRetract_jog ;
+bReset_Error                 := Cylinder_HMI.bReset_Error ;
+
+(*---------------OUTPUT-------------*)
+
+Cylinder_HMI.bExtend_Enable  := bExtend_Enable ;
+Cylinder_HMI.bRetract_Enable := bRetract_Enable ;
+Cylinder_HMI.bExtend_Prox    := bExtend_Prox ;
+Cylinder_HMI.bRetract_Prox   := bRetract_Prox ;
+Cylinder_HMI.bExtend_Work    := bExtend_Work ; 
+Cylinder_HMI.bRetract_Work   := bRetract_Work ;
+Cylinder_HMI.done            := done ; 
+Cylinder_HMI.busy            := busy ; 
+Cylinder_HMI.error           := error ; 
+Cylinder_HMI.errorID         := errorID; 
+Cylinder_HMI.errorTXT        := errorTXT ;  ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Queue_Rec_Cmd" Id="{6d1b0814-f17d-41ba-b606-f6788f0639eb}">
+      <Declaration><![CDATA[METHOD Queue_Rec_Cmd
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE Cmd_state OF
+	0:
+		bExtend_auto:=FALSE;
+		bRetract_auto:=FALSE;
+		bReset_Error:= FALSE;
+		Cmd_state:=1;
+	1:
+		IF Queue_RecDel_Flag THEN	
+			CMD_state:=10;
+			RETURN;
+		END_IF
+	10:
+		CASE Cylinder_CMD_Itf.FUNCTIONCODE OF
+			C00:
+				bExtend_auto:= TRUE;
+				Cmd_state:= 20;
+			C01:
+				bRetract_auto:= TRUE;
+				Cmd_state:= 20;
+			C02:
+				Cmd_state:=21;
+		END_CASE
+	20:
+		IF done THEN
+			Cmd_state:=100;
+		ELSE
+			Cmd_state:=0;
+		END_IF
+		
+	21:
+		IF error THEN
+		bReset_Error:= TRUE;
+		Cmd_state:=100;
+		END_IF	
+	 	IF NOT error THEN
+			Cmd_state:=0;
+		END_IF
+	100:
+		bExtend_auto:=FALSE;
+		bRetract_auto:=FALSE;
+		bReset_Error:= FALSE;
+		Cmd_state:=0;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <DUT Name="REC_iCMD_DATA" Id="{30710e95-7bf2-4b96-a663-c74b66c6cda6}">
+    <Declaration><![CDATA[TYPE REC_iCMD_DATA :
+STRUCT
+	DEVICE_ID       : UDINT;
+	FUNCTIONCODE    : UDINT;
+	STATUE          : STRING ;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <GVL Name="Error_Record_Data" Id="{e8ec7943-6d88-4fbb-886d-660b621b3ae2}">
+    <Declaration><![CDATA[VAR_GLOBAL
+END_VAR
+VAR_GLOBAL  PERSISTENT
+	Error_List              : ARRAY[1..MAX_CSV_ROWS] OF ERROR_RECORD;
+		i                   : UDINT:=0;
+END_VAR
+
+VAR_GLOBAL CONSTANT
+	MAX_CSV_ROWS 			: UDINT := 20;
+	MAX_CSV_COLUMNS 		: UDINT := 4;
+	MAX_CSV_FIELD_LENGTH	: UDINT := 100;
+    MAX_ERROR_SIZE          : UDINT:= 20;
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

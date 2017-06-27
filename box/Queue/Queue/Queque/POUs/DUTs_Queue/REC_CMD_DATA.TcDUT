@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <DUT Name="REC_CMD_DATA" Id="{e270fe24-9f66-4fee-9fca-e736020b8997}">
+    <Declaration><![CDATA[TYPE REC_CMD_DATA :
+STRUCT
+	DEVICE_ID       : UDINT;
+	FUNCTIONCODE    : UDINT;
+	DATA            : LREAL;
+	Vel             : LREAL;
+	Statue          : SEND_CMD_DATA;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

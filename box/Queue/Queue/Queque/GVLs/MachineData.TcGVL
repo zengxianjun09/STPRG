@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <GVL Name="MachineData" Id="{c64a6890-44c2-4f4f-8607-f72d982da0d8}">
+    <Declaration><![CDATA[VAR_GLOBAL CONSTANT
+	gDeviceCNT            : UDINT :=100;
+	gAxisBeginNum         : UDINT :=0;
+	gCylinderBeginNum     : UDINT :=30;
+	gAxisEndNum           : UDINT :=20;
+	gCylinderEndNum       : UDINT :=60;
+END_VAR
+
+VAR_GLOBAL
+	HMISwithMode          : UDINT:=2;
+	Queue_SendDel_Flag    : BOOL :=FALSE;
+	Queue_RecDel_Flag     : BOOL :=FALSE;
+	
+	gDevice_ID            : ARRAY[0..gDeviceCNT] OF REC_CMD_DATA;
+	gAxis                 : ARRAY[0..20]  OF Axis_ref;
+	gAxisCtrl             : ARRAY[0..20]  OF Axis_Contrl;
+	gAxisCtrl_HMI         : ARRAY[0..20]  OF Axis_HMI_Struct;
+	gCylinderCtrl         : ARRAY[30..60] OF Cylinder_Contrl;
+	gCylinderCtrl_HMI     : ARRAY[30..60] OF Cylinder_HMI_Structure;
+END_VAR
+
+
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

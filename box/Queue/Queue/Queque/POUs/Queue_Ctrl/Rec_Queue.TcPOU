@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="Rec_Queue" Id="{918628db-52ec-4ebd-a8e0-f75cd21824a9}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK Rec_Queue
+VAR_INPUT
+END_VAR
+VAR_IN_OUT
+	REC_Queue_List     : ARRAY[0..Param_Queue.MAX_QUEUE_SIZE] OF REC_CMD_DATA;
+END_VAR
+VAR_OUTPUT
+	Err_Out            : BOOL;
+END_VAR
+VAR
+	Head_Var           : INT;
+	Tail_Var           : INT;
+	Count_Var          : INT;
+	Index_Init         : INT;
+	Del_QueueTemp      : REC_CMD_DATA;
+	Init_QueueTemp     : REC_CMD_DATA;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Count_Queue" Id="{e0d8f68d-9c9f-4d00-aff9-42432decdadc}">
+      <Declaration><![CDATA[METHOD PUBLIC Count_Queue : INT;
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Count_Queue := Count_Var;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Delete_Queue" Id="{01156375-bf24-4bcd-8356-890c29f166df}">
+      <Declaration><![CDATA[METHOD PUBLIC Delete_Queue : REC_CMD_DATA;
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Count_Var = 0 THEN
+	Err_Out:= TRUE;
+	RETURN;
+ELSE
+	Err_Out:= FALSE;
+	Count_Var:= Count_Var-1; 
+	Del_QueueTemp:= REC_Queue_List[Head_Var];
+	Head_Var:= (Head_Var +1) MOD Param_Queue.MAX_QUEUE_SIZE;
+	Delete_Queue:= Del_QueueTemp;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Empty_Queue" Id="{254d9fc6-b70b-45b7-957a-e33af6ccc0ee}">
+      <Declaration><![CDATA[METHOD PUBLIC Empty_Queue : BOOL;
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Count_Var = 0 THEN
+	Empty_Queue:= TRUE;
+ELSE 
+	Empty_Queue:= FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Full_Queue" Id="{52406aae-b632-45e9-85fd-469246537349}">
+      <Declaration><![CDATA[METHOD PUBLIC Full_Queue: BOOL;
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Count_Var = Param_Queue.MAX_QUEUE_SIZE THEN
+	Full_Queue := TRUE;
+ELSE
+	Full_Queue := FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Head_Queue" Id="{0d502f0c-ca5c-4ef3-8605-074a52a1e085}">
+      <Declaration><![CDATA[METHOD PUBLIC Head_Queue : REC_CMD_DATA;
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Head_Queue:= REC_Queue_List[Head_Var];]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Init_Queue" Id="{9a8d14a0-daef-4c7e-ac44-14fe5b7653ba}">
+      <Declaration><![CDATA[METHOD PUBLIC Init_Queue
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Head_Var:= 0;
+Tail_Var:= 0;
+Count_Var:= 0;
+Err_Out:= FALSE;
+Del_QueueTemp:= Init_QueueTemp;
+FOR Index_Init:=0 TO Param_Queue.MAX_QUEUE_SIZE BY 1 DO
+	REC_Queue_List[Index_Init]:= Init_QueueTemp;
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Insert_Queue" Id="{da424955-1440-4185-8547-de1608264453}">
+      <Declaration><![CDATA[METHOD PUBLIC Insert_Queue
+VAR_INPUT
+	Insert_Queue : REC_CMD_DATA;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Count_Var= Param_Queue.MAX_QUEUE_SIZE THEN
+	Err_Out:= TRUE;
+	RETURN;
+ELSE
+	Err_Out:= FALSE;
+	Count_Var:= Count_Var + 1;
+	REC_Queue_List[Tail_Var]:= Insert_Queue;
+	Tail_Var:= (Tail_Var +1) MOD Param_Queue.MAX_QUEUE_SIZE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

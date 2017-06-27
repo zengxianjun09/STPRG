@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="MAIN" Id="{11bced4f-e1c0-41ed-83af-6ede00c1b4c9}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	Client_Application : Client;	
+	Server_Application : Server;
+	
+	bSendExecute       : BOOL;
+	bSendEn            : BOOL;
+	cSendData          : SEND_iCMD_DATA;//STRING(255);
+	cReceiveData       : REC_iCMD_DATA;//STRING(255);
+	//sSendData          : Queue_SEND_Contrl;//STRING(255);
+	//sReceiveData     : Queue_REC_Contrl;//STRING(255);		
+	
+	
+	CMD_Manage         : CMD_Manage;
+	CMD_Manager        : CMD_Manager;
+	Err_Record         : Err_Record;
+END_VAR
+VAR_INPUT
+	sReceiveData       : Queue_REC_Contrl;
+	sSendData          : Queue_SEND_Contrl;
+	Axis               : Axis_Contrl;
+	Cylinder           : Cylinder_Contrl;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[sReceiveData();
+sSendData();
+CMD_Manager();
+Axis(
+	HMI:= gAxisCtrl_HMI[0] , 
+	Axis_CMD_Itf:= gDevice_ID[0]  ,
+	Axis_ref:= gAxis[0] ,);
+Cylinder(
+	Cylinder_HMI:= gCylinderCtrl_HMI[30]  , 
+	Cylinder_CMD_Itf:= gDevice_ID[30], 
+);
+Err_Record();
+P_TextModeWrite();
+IOInstances_Cylinder();
+IOInstances_Axis();
+(*_________________________TCP_______________________________*)
+Client_Application(sRemoteHost:= '127.0.0.1' ,
+				   nRemotePort:= 5000 , 
+				   bEnable:= ,
+				   bSendEn:= bSendEn,
+				   cSendData:=cSendData ,
+                   eState=> , 
+                  cReceiveData=>cReceiveData );
+				  
+Server_Application(
+					sLocalHost:='127.0.0.1' , 
+					nLocalPort:=5000 , 
+					bConnectEnable:=TRUE , 
+					bSendExecute:=Queue_SendDel_Flag, 
+					sSendData:=sSendData.Delete_Queue , 
+					eState=> , 
+					bReceiveDone=>sReceiveData.bInsert , 
+					sReceiveData=>sReceiveData.Insert_Queue ); 
+ 
+(*_____________________________________________________________*)					
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
